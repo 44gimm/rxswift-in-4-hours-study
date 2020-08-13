@@ -81,6 +81,9 @@ class ViewController: UIViewController {
       }
     }
     
+    // Observable.just -> 한번만 전달
+    // Observable.from -> 배열로 받아 배열만큼 전달
+    
     //    return Observable.create() { f in
     //      DispatchQueue.global().async {
     //        let url = URL(string: MEMBER_LIST_URL)!
@@ -107,20 +110,34 @@ class ViewController: UIViewController {
     
     // 2. Observable로 오는 데이터를 받아서 처리하는 방법
     // observable이 종료되어야(onCompleted, onError, disposed) 클로저가 사라진다.
+    
+//    _ = downloadJson(MEMBER_LIST_URL)
+//      .debug()
+//      .subscribe { [weak self] event in
+//        switch event {
+//        case let .next(json):
+//          DispatchQueue.main.async {
+//            self?.editView.text = json
+//            self?.setVisibleWithAnimation(self?.activityIndicator, false)
+//          }
+//
+//        case .completed, .error:
+//          break
+//        }
+//    }
+    
+    
+    // operator: observable에서 subscribe 사이에 데이터를 처리하는 연산자
     _ = downloadJson(MEMBER_LIST_URL)
       .debug()
-      .subscribe { [weak self] event in
-        switch event {
-        case let .next(json):
-          DispatchQueue.main.async {
-            self?.editView.text = json
-            self?.setVisibleWithAnimation(self?.activityIndicator, false)
-          }
-          
-        case .completed, .error:
-          break
-        }
-    }
+      .map { json in json?.count ?? 0 }     // operator
+      .filter { count in count > 0 }        // operator
+      .map { "\($0)" }                      // operator
+      .observeOn(MainScheduler.instance)    // operator DispatchQueue.main.async 처리
+      .subscribe(onNext: { [weak self] json in
+        self?.editView.text = json
+        self?.setVisibleWithAnimation(self?.activityIndicator, false)
+      })
     
   }
 }
