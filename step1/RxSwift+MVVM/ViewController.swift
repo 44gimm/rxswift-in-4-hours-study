@@ -31,6 +31,8 @@ class ViewController: UIViewController {
   @IBOutlet var timerLabel: UILabel!
   @IBOutlet var editView: UITextView!
   
+  var disposeBag = DisposeBag()
+  
   override func viewDidLoad() {
     super.viewDidLoad()
     Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -127,17 +129,31 @@ class ViewController: UIViewController {
 //    }
     
     
-    // operator: observable에서 subscribe 사이에 데이터를 처리하는 연산자
-    _ = downloadJson(MEMBER_LIST_URL)
-      .debug()
-      .map { json in json?.count ?? 0 }     // operator
-      .filter { count in count > 0 }        // operator
-      .map { "\($0)" }                      // operator
-      .observeOn(MainScheduler.instance)    // operator DispatchQueue.main.async 처리
+    // operator: 생성/수정/sucscribe 모두 다 operator
+    let jsonObservable = downloadJson(MEMBER_LIST_URL)
+    let helloObservable = Observable.just("Hello World")
+      
+    Observable.zip(jsonObservable, helloObservable) { $1 + "\n" + $0! }   // combining operator
+      .observeOn(MainScheduler.instance)
       .subscribe(onNext: { [weak self] json in
         self?.editView.text = json
         self?.setVisibleWithAnimation(self?.activityIndicator, false)
       })
+      .disposed(by: self.disposeBag)
+      
+//      .debug()
+//      .map { json in json?.count ?? 0 }     // operator
+//      .filter { count in count > 0 }        // operator
+//      .map { "\($0)" }                      // operator
+//      .observeOn(MainScheduler.instance)    // operator DispatchQueue.main.async 처리
+//      .subscribeOn(ConcurrentDispatchQueueScheduler(qos: .default))   // 해당 스레드에서 observable 처음 동작 수행, 위치에 상관 x
+//      .subscribe(onNext: { [weak self] json in
+//        self?.editView.text = json
+//        self?.setVisibleWithAnimation(self?.activityIndicator, false)
+//      })
     
   }
 }
+
+// 자주쓰는 combining operators
+// merge, zip combineLatest
