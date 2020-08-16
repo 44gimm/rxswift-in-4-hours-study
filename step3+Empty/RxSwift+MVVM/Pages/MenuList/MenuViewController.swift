@@ -19,14 +19,34 @@ class MenuViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     
-    updateUI()
+    self.viewModel.menuObservable
+      .bind(to: self.tableView.rx.items(cellIdentifier: "MenuItemTableViewCell", cellType: MenuItemTableViewCell.self)) { index, item, cell in
+
+        cell.title.text = item.name
+        cell.price.text = "\(item.price)"
+        cell.count.text = "\(item.count)"
+        cell.onChange = { [weak self] amount in
+          self?.viewModel.changeCount(item: item, amount: amount)
+        }
+    }
+    .disposed(by: self.disposeBag)
+    
+    self.viewModel.itemCount
+      .map { "\($0)" }
+      .observeOn(MainScheduler.instance)
+//      .subscribe(onNext: { [weak self] in
+//        self?.itemCountLabel.text = $0
+//      })
+      .bind(to: self.itemCountLabel.rx.text)  // subscribe 하지 않아도 데이터 바인딩 처리, weak 없어도 내부적으로 처리
+      .disposed(by: self.disposeBag)
     
     self.viewModel.totalPrice
-      .scan(0, accumulator: +)
       .map { $0.currencyKR() }
-      .subscribe(onNext: {
-        self.totalPrice.text = $0
-      })
+      .observeOn(MainScheduler.instance)
+//      .subscribe(onNext: { [weak self] in
+//        self?.totalPrice.text = $0
+//      })
+      .bind(to: self.totalPrice.rx.text)
       .disposed(by: self.disposeBag)
   }
   
@@ -52,6 +72,7 @@ class MenuViewController: UIViewController {
   @IBOutlet var totalPrice: UILabel!
   
   @IBAction func onClear() {
+    self.viewModel.clearAllItemSelections()
   }
   
   @IBAction func onOrder(_ sender: UIButton) {
@@ -59,28 +80,32 @@ class MenuViewController: UIViewController {
     // showAlert("Order Fail", "No Orders")
 //    performSegue(withIdentifier: "OrderViewController", sender: nil)
     
-    self.viewModel.totalPrice.onNext(100)
+//    self.viewModel.totalPrice.onNext(100)
+    
+//    self.viewModel.menuObservable.onNext([
+//      Menu(id: 0, name: "changed", price: Int.random(in: 100...1000), count: Int.random(in: 0...3)),
+//      Menu(id: 1, name: "changed", price: Int.random(in: 100...1000), count: Int.random(in: 0...3)),
+//      Menu(id: 2, name: "changed", price: Int.random(in: 100...1000), count: Int.random(in: 0...3))
+//    ])
+    
+    self.viewModel.onOrder()
   }
   
-  func updateUI() {
-    self.itemCountLabel.text = "\(viewModel.itemsCount)"
-//    self.totalPrice.text = "\(viewModel.totalPrice.currencyKR())"
-  }
 }
 
-extension MenuViewController: UITableViewDataSource {
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return self.viewModel.menus.count
-  }
-  
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    let cell = tableView.dequeueReusableCell(withIdentifier: "MenuItemTableViewCell") as! MenuItemTableViewCell
-    
-    let menu = self.viewModel.menus[indexPath.row]
-    cell.title.text = menu.name
-    cell.price.text = "\(menu.price)"
-    cell.count.text = "\(menu.count)"
-    
-    return cell
-  }
-}
+//extension MenuViewController: UITableViewDataSource {
+//  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+//    return self.viewModel.menus.count
+//  }
+//
+//  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+//    let cell = tableView.dequeueReusableCell(withIdentifier: "MenuItemTableViewCell") as! MenuItemTableViewCell
+//
+//    let menu = self.viewModel.menus[indexPath.row]
+//    cell.title.text = menu.name
+//    cell.price.text = "\(menu.price)"
+//    cell.count.text = "\(menu.count)"
+//
+//    return cell
+//  }
+//}
