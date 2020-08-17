@@ -33,11 +33,14 @@ class MenuViewController: UIViewController {
     
     self.viewModel.itemCount
       .map { "\($0)" }
-      .observeOn(MainScheduler.instance)
+//      .catchErrorJustReturn("")               // 에러가 발생한 경우 빈문자열을 리턴한다
+//      .observeOn(MainScheduler.instance)      // ui 처리 시 매번 필요하다
 //      .subscribe(onNext: { [weak self] in
 //        self?.itemCountLabel.text = $0
 //      })
-      .bind(to: self.itemCountLabel.rx.text)  // subscribe 하지 않아도 데이터 바인딩 처리, weak 없어도 내부적으로 처리
+//      .bind(to: self.itemCountLabel.rx.text)  // subscribe 하지 않아도 데이터 바인딩 처리, weak 없어도 내부적으로 처리
+      .asDriver(onErrorJustReturn: "")          // ui 처리 시 매번 처리하는 작업이 불편하니 driver 로 변경
+      .drive(self.itemCountLabel.rx.text)       // driver 가 되면 subscrive 나 bind가 아니라 drive, drive 는 항상 메인스레드에서 돌아간다.
       .disposed(by: self.disposeBag)
     
     self.viewModel.totalPrice
